@@ -1,0 +1,72 @@
+{
+  "train_dataset": {
+    "dataset_name": "shopee",
+    "params": {
+      "dataset_path": "/data/shopee-product-matching/new_train.csv",
+      "images_dir": "/data/shopee-product-matching/train_images"
+    }
+  },
+  "test_dataset": {
+    "dataset_name": "shopee",
+    "params": {
+      "dataset_path": "/data/shopee-product-matching/new_test.csv",
+      "images_dir": "/data/shopee-product-matching/train_images"
+    }
+  },
+  "train_loader": {
+    "sampler": {
+      "sampler_name": "BatchSampler",
+      "params": {
+        "n_classes": 30,
+        "n_samples": 4
+      }
+    },
+    "params": {
+      "num_workers": 0
+    }
+  },
+  "test_loader": {
+    "sampler": {
+      "sampler_name": "BatchSampler",
+      "params": {
+        "n_classes": 10,
+        "n_samples": 4
+      }
+    },
+    "params": {
+      "num_workers": 0
+    }
+  },
+  "optimizer": {
+    "optimizer_name": "adam",
+    "params": {
+      "lr": 0.001
+    }
+  },
+  "scheduler": {
+    "scheduler_name": "step_lr",
+    "params": {
+      "step_size": 80,
+      "gamma": 0.1,
+      "last_epoch": -1
+    }
+  },
+  "loss": {
+    "loss_name" : "online_triplet_loss",
+    "params": {
+      "margin": 1.0
+    }
+  },
+  "model":{
+    "model_name": "EmbeddingNet",
+    "path_to_save": "/data/model_without_union/"
+  },
+  "num_epochs": 240,
+  "cuda": true,
+  "model_save_interval": 30,
+  "log_interval": 15,
+  "log_file": "/app/logs/train_model.log",
+  "tensorboard": {
+    "tensorboard_path": "/data/logging/experiments"
+  }
+}

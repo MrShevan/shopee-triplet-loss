@@ -1,0 +1,22 @@
+version: '2.3'
+services:
+    shopee:
+        runtime: nvidia
+        build:
+            context: ./
+            dockerfile: ./Dockerfile
+        image: shopee:$USER
+        container_name: shopee_$USER
+        environment:
+            - TZ=MSK
+            - PASSWORD=$JUPYTER_PASSWORD
+        ports:
+            - "8082:8086"
+            - "8084:6006"
+        volumes:
+            - /media/megatron/aeshevtsov/src/shopee-triplet-loss:/app
+            - /media/megatron/aeshevtsov/data/shopee-triplet-loss:/data
+        ipc: host
+        shm_size: 8G
+        command: /bin/bash -c "cd / && nohup jupyter notebook --allow-root --ip=0.0.0.0 --port=8086 & nohup tensorboard --logdir=/data/logging/experiments --host=0.0.0.0 && sleep infinity"
+        restart: unless-stopped

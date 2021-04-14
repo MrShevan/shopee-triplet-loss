@@ -1,0 +1,12 @@
+{
+  "val_dataset": {
+  },
+  "val_loader": {
+  },
+  "model":{
+    "model_name": "EmbeddingNet",
+    "path_to_save": "data/models/"
+  },
+  "cuda": true,
+  "log_interval": 15
+}
