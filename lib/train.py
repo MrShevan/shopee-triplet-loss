@@ -7,15 +7,20 @@ from torch import nn
 from torch import optim
 from torch.utils.data import dataloader
 from torch.optim import lr_scheduler
+from torch.utils import tensorboard
 
 from lib.utils import save_model
 from lib.utils import pdist
 from lib.utils import compute_f1_score
+from lib.utils import imshow_triplet
+
+from lib.triplet_selector import TripletSelector
 
 
 def train_model(
     train_loader: dataloader.DataLoader,
     test_loader: dataloader.DataLoader,
+    triplet_selector: TripletSelector,
     model: nn.Module,
     loss_fn: nn.Module,
     optimizer: optim.Optimizer,
@@ -25,6 +30,7 @@ def train_model(
     multi_gpu: bool,
     log_interval: int,
     model_save_interval: int,
+    writer: tensorboard.SummaryWriter,
     start_epoch: int = 0,
     path_to_save: str = ''
 ):
@@ -39,6 +45,7 @@ def train_model(
     Args:
         train_loader: pytorch loader for train dataset
         test_loader: pytorch loader for val dataset
+        triplet_selector:
         model: pytorch model
         loss_fn: loss function
         optimizer:
@@ -47,6 +54,8 @@ def train_model(
         device:
         multi_gpu:
         log_interval:
+        model_save_interval:
+        writer:
         start_epoch:
         path_to_save:
     """
@@ -59,17 +68,22 @@ def train_model(
         # Train stage
         logging.info(f'Train Epoch: {epoch + 1}/{n_epochs}')
 
-        model, train_loss, f1_score = train_epoch(
+        model, train_loss, train_f1 = train_epoch(
             train_loader=train_loader,
+            triplet_selector=triplet_selector,
             model=model,
             loss_fn=loss_fn,
             optimizer=optimizer,
             device=device,
-            log_interval=log_interval
+            log_interval=log_interval,
+            writer=writer
         )
 
         logging.info(f'Train epoch Loss: {train_loss:.4f}')
-        logging.info(f'Train epoch F1: {f1_score:.4f}')
+        logging.info(f'Train epoch F1: {train_f1:.4f}')
+
+        writer.add_scalar(f'Train Loss', train_loss, epoch)
+        writer.add_scalar(f'Train F1', train_f1, epoch)
 
         if (epoch + 1) % model_save_interval == 0:
             modelpath = os.path.join(path_to_save, f'model_epoch_{epoch}.pth')
@@ -78,36 +92,44 @@ def train_model(
         # Test stage
         logging.info(f'Test Epoch: {epoch + 1}/{n_epochs}')
 
-        val_loss, f1_score = test_epoch(
+        test_loss, test_f1 = test_epoch(
             test_loader=test_loader,
+            triplet_selector=triplet_selector,
             model=model,
             loss_fn=loss_fn,
             device=device,
             log_interval=log_interval
         )
 
-        logging.info(f'Test epoch Loss: {val_loss:.4f}')
-        logging.info(f'Test epoch F1: {f1_score:.4f}')
+        logging.info(f'Test epoch Loss: {test_loss:.4f}')
+        logging.info(f'Test epoch F1: {test_f1:.4f}')
+
+        writer.add_scalar(f'Test Loss', test_loss, epoch)
+        writer.add_scalar(f'Test F1', test_f1, epoch)
 
 
 def train_epoch(
     train_loader: dataloader.DataLoader,
+    triplet_selector: TripletSelector,
     model: nn.Module,
     loss_fn: nn.Module,
     optimizer: optim.Optimizer,
     device: torch.device,
-    log_interval: int
+    log_interval: int,
+    writer: tensorboard.SummaryWriter
 ):
     """
     Train stage
 
     Args:
         train_loader:
+        triplet_selector:
         model:
         loss_fn:
         optimizer:
         device:
         log_interval:
+        writer:
     """
     model.train()
 
@@ -131,8 +153,18 @@ def train_epoch(
         optimizer.zero_grad()
         outputs = model(data)
 
+        # choose triplets
+        triplets = triplet_selector.get_triplets(outputs, target)
+
+        if outputs.is_cuda:
+            triplets = triplets.cuda()
+
+        anchor = outputs[triplets[:, 0]]
+        positive = outputs[triplets[:, 1]]
+        negative = outputs[triplets[:, 2]]
+
         # compute loss, backward gradients and make step
-        loss, dist_pos, dist_neg = loss_fn(outputs, target)
+        loss, dist_pos, dist_neg = loss_fn(anchor, positive, negative)
 
         losses.append(loss.item())
         dists_pos.append(dist_pos.item())
@@ -166,6 +198,19 @@ def train_epoch(
                 )
             )
 
+            writer.add_figure(
+                'Train Triplet',
+                imshow_triplet(
+                    data[triplets[0][0]],
+                    anchor[0],
+                    data[triplets[0][1]],
+                    positive[0],
+                    data[triplets[0][2]],
+                    negative[0]
+                ),
+                batch_idx
+            )
+
             losses = []
             dists_pos = []
             dists_neg = []
@@ -185,6 +230,7 @@ def train_epoch(
 
 def test_epoch(
     test_loader: dataloader.DataLoader,
+    triplet_selector: TripletSelector,
     model: nn.Module,
     loss_fn: nn.Module,
     device: torch.device,
@@ -194,7 +240,8 @@ def test_epoch(
     Test stage
 
     Args:
-        val_loader:
+        test_loader:
+        triplet_selector:
         model:
         loss_fn:
         device:
@@ -222,8 +269,18 @@ def test_epoch(
             # forward
             outputs = model(data)
 
+            # choose triplets
+            triplets = triplet_selector.get_triplets(outputs, target)
+
+            if outputs.is_cuda:
+                triplets = triplets.cuda()
+
+            anchor = outputs[triplets[:, 0]]
+            positive = outputs[triplets[:, 1]]
+            negative = outputs[triplets[:, 2]]
+
             # compute loss, backward gradients and make step
-            loss, dist_pos, dist_neg = loss_fn(outputs, target)
+            loss, dist_pos, dist_neg = loss_fn(anchor, positive, negative)
 
             losses.append(loss.item())
             dists_pos.append(dist_pos.item())

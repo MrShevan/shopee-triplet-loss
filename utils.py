@@ -10,9 +10,10 @@ from torchvision import transforms
 
 from lib.datasets import ShopeeDataset
 from lib.model import EmbeddingNet, TripletNet
-from lib.loss import OnlineTripletLoss
+from lib.loss import TripletLoss, OnlineTripletLoss
 from lib.sampler import BalancedBatchSampler
-from lib.triplet_selector import HardestNegativeTripletSelector, \
+from lib.triplet_selector import RandomNegativeTripletSelector,\
+    HardestNegativeTripletSelector, \
     SemihardNegativeTripletSelector
 
 
@@ -51,14 +52,31 @@ def get_loader(dataset: ShopeeDataset, sampler: dict, params: dict):
 
 
 def get_loss(loss_name: str, params: dict):
+    if loss_name == 'triplet_loss':
+        return TripletLoss(**params)
+
     if loss_name == 'online_triplet_loss':
         return OnlineTripletLoss(
-            params['margin'],
-            SemihardNegativeTripletSelector(params['margin'])
+            SemihardNegativeTripletSelector(**params),
+            **params
         )
 
     else:
         Exception('Not implemented loss!')
+
+
+def get_triplet_selector(selector_name: str, params: dict):
+    if selector_name == 'hardest_negative':
+        return HardestNegativeTripletSelector(**params)
+
+    if selector_name == 'random_hard_negative':
+        return RandomNegativeTripletSelector(**params)
+
+    if selector_name == 'semihard_negative':
+        return SemihardNegativeTripletSelector(**params)
+
+    else:
+        Exception('Not implemented triplet selector!')
 
 
 def get_model(model_name: str):

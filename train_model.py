@@ -1,3 +1,4 @@
+import os
 import logging
 import json
 import numpy as np
@@ -5,6 +6,7 @@ import argparse
 
 import torch
 import torch.nn as nn
+from torch.utils import tensorboard
 
 from torchvision import transforms
 import lib.transforms as mytransforms
@@ -14,6 +16,7 @@ from lib.train import train_model
 from utils import get_dataset
 from utils import get_loader
 from utils import get_loss
+from utils import get_triplet_selector
 from utils import get_model
 from utils import get_optimizer
 from utils import get_scheduler
@@ -76,6 +79,7 @@ if __name__ == '__main__':
         transform=transforms_pipeline,
         params=settings["train_dataset"]["params"]
     )
+
     test_dataset = get_dataset(
         dataset_name=settings["test_dataset"]["dataset_name"],
         transform=transforms_pipeline,
@@ -88,6 +92,7 @@ if __name__ == '__main__':
         sampler=settings["train_loader"]["sampler"],
         params=settings["train_loader"]["params"]
     )
+
     test_loader = get_loader(
         dataset=test_dataset,
         sampler=settings["test_loader"]["sampler"],
@@ -98,6 +103,11 @@ if __name__ == '__main__':
     loss_fn = get_loss(
         loss_name=settings['loss']['loss_name'],
         params=settings['loss']['params']
+    )
+
+    triplet_selector = get_triplet_selector(
+        selector_name=settings['triplet_selector']['selector_name'],
+        params=settings['triplet_selector']['params']
     )
 
     # Prepare model
@@ -125,10 +135,15 @@ if __name__ == '__main__':
         params=settings['scheduler']['params']
     )
 
+    writer = tensorboard.SummaryWriter(
+        log_dir=os.path.join(settings['tensorboard_path'], settings['config_name'])
+    )
+
     # Train model
     train_model(
         train_loader,
         test_loader,
+        triplet_selector=triplet_selector,
         model=model,
         loss_fn=loss_fn,
         optimizer=optimizer,
@@ -138,5 +153,6 @@ if __name__ == '__main__':
         multi_gpu=multi_gpu,
         log_interval=settings['log_interval'],
         model_save_interval=settings['model_save_interval'],
-        path_to_save=settings['model']['path_to_save']
+        path_to_save=settings['model']['path_to_save'],
+        writer=writer
     )

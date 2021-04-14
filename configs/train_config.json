@@ -1,4 +1,5 @@
 {
+  "config_name": "base",
   "train_dataset": {
     "dataset_name": "shopee",
     "params": {
@@ -29,7 +30,7 @@
     "sampler": {
       "sampler_name": "BatchSampler",
       "params": {
-        "n_classes": 10,
+        "n_classes": 30,
         "n_samples": 4
       }
     },
@@ -52,7 +53,13 @@
     }
   },
   "loss": {
-    "loss_name" : "online_triplet_loss",
+    "loss_name" : "triplet_loss",
+    "params": {
+      "margin": 1.0
+    }
+  },
+  "triplet_selector": {
+    "selector_name": "semihard_negative",
     "params": {
       "margin": 1.0
     }
@@ -66,7 +73,5 @@
   "model_save_interval": 30,
   "log_interval": 15,
   "log_file": "/app/logs/train_model.log",
-  "tensorboard": {
-    "tensorboard_path": "/data/logging/experiments"
-  }
+  "tensorboard_path": "/data/logging/experiments"
 }

@@ -3,7 +3,6 @@ from torch import nn
 from torch import optim
 from torch.optim import lr_scheduler
 
-import logging
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -108,3 +107,69 @@ def imshow(
         plt.title(title)
 
     plt.pause(0.001)  # pause a bit so that plots are updated
+
+
+def imshow_triplet(
+    anchor_image,
+    anchor_embedding,
+    positive_image,
+    positive_embedding,
+    negative_image,
+    negative_embedding,
+    denormalize: bool = True,
+    mean: tuple = (0.485, 0.456, 0.406),
+    std: tuple = (0.229, 0.224, 0.225)
+):
+    with torch.no_grad():
+        embeddings = torch.cat(
+            (
+                anchor_embedding.unsqueeze(dim=0),
+                positive_embedding.unsqueeze(dim=0),
+                negative_embedding.unsqueeze(dim=0)
+            ), dim=0
+        )
+
+        result = pdist(embeddings).cpu().numpy()
+
+        # define figure
+        fig = plt.figure(figsize=(15, 5))
+
+        # Anchor image
+        ax = fig.add_subplot(1, 3, 1)
+        anchor = anchor_image.cpu().numpy().transpose((1, 2, 0))
+        if denormalize:
+            anchor = np.array(std) * anchor + np.array(mean)
+            anchor = np.clip(anchor, 0, 1)
+        ax.imshow(anchor)
+        ax.axis('off')
+        ax.set_title("Anchor", size=12)
+
+        # Positive image
+        ax = fig.add_subplot(1, 3, 2)
+        positive = positive_image.cpu().numpy().transpose((1, 2, 0))
+        if denormalize:
+            positive = np.array(std) * positive + np.array(mean)
+            positive = np.clip(positive, 0, 1)
+        ax.imshow(positive)
+        ax.axis('off')
+        ax.set_title(
+            "Positive (distance : {:.2f})".format(result[0][1]),
+            color=("green" if result[0][1] < result[0][2] else "red"),
+            size=12
+        )
+
+        # Negative image
+        ax = fig.add_subplot(1, 3, 3)
+        negative = negative_image.cpu().numpy().transpose((1, 2, 0))
+        if denormalize:
+            negative = np.array(std) * negative + np.array(mean)
+            negative = np.clip(negative, 0, 1)
+        ax.imshow(negative)
+        ax.axis('off')
+        ax.set_title(
+            "Negative (distance : {:.2f})".format(result[0][2]),
+            color=("red" if result[0][1] < result[0][2] else "green"),
+            size=12
+        )
+
+    return fig
