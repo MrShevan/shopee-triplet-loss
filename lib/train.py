@@ -10,7 +10,7 @@ from torch.optim import lr_scheduler
 from torch.utils import tensorboard
 
 from lib.utils import save_model
-from lib.utils import pdist
+from lib.utils import pdist_cosine
 from lib.utils import compute_f1_score
 from lib.utils import imshow_triplet
 
@@ -219,7 +219,7 @@ def train_epoch(
     embeddings = torch.cat(embeddings, dim=0)
     targets = torch.cat(targets, dim=0)
 
-    dist_matrix = pdist(embeddings).cpu().detach().numpy()
+    dist_matrix = pdist_cosine(embeddings).cpu().detach().numpy()
     targets = targets.cpu().numpy()
 
     # metrics
@@ -320,7 +320,7 @@ def test_epoch(
     embeddings = torch.cat(embeddings, dim=0)
     targets = torch.cat(targets, dim=0)
 
-    dist_matrix = pdist(embeddings).cpu().detach().numpy()
+    dist_matrix = pdist_cosine(embeddings).cpu().detach().numpy()
     targets = targets.cpu().numpy()
 
     # metrics

@@ -112,7 +112,9 @@ if __name__ == '__main__':
 
     # Prepare model
     model = get_model(
-        model_name=settings['model']['model_name']
+        model_name=settings['model']['model_name'],
+        pretrained=settings['model']['pretrained'],
+        finetune=settings['model']['finetune']
     )
 
     device, multi_gpu = get_device_name(cuda=settings['cuda'])
@@ -136,8 +138,18 @@ if __name__ == '__main__':
     )
 
     writer = tensorboard.SummaryWriter(
-        log_dir=os.path.join(settings['tensorboard_path'], settings['config_name'])
+        log_dir=os.path.join(settings['tensorboard_dir'], settings['config_name'])
     )
+
+    # Train Parameters
+    path_to_save = os.path.join(settings['models_dir'], settings['config_name'])
+    if not os.path.exists(path_to_save):
+        os.mkdir(path_to_save)
+
+    n_epochs = settings['num_epochs']
+    start_epoch = settings['start_epoch']
+    log_interval = settings['log_interval']
+    model_save_interval = settings['model_save_interval']
 
     # Train model
     train_model(
@@ -148,11 +160,12 @@ if __name__ == '__main__':
         loss_fn=loss_fn,
         optimizer=optimizer,
         scheduler=scheduler,
-        n_epochs=settings['num_epochs'],
+        n_epochs=n_epochs,
+        start_epoch=start_epoch,
         device=device,
         multi_gpu=multi_gpu,
-        log_interval=settings['log_interval'],
-        model_save_interval=settings['model_save_interval'],
-        path_to_save=settings['model']['path_to_save'],
+        log_interval=log_interval,
+        model_save_interval=model_save_interval,
+        path_to_save=path_to_save,
         writer=writer
     )

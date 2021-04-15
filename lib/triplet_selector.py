@@ -3,7 +3,7 @@ from itertools import combinations
 import numpy as np
 import torch
 
-from lib.utils import pdist
+from lib.utils import pdist_l2
 
 
 def hardest_negative(loss_values):
@@ -49,7 +49,7 @@ class FunctionNegativeTripletSelector(TripletSelector):
     def get_triplets(self, embeddings, labels):
         if self.cpu:
             embeddings = embeddings.cpu()
-        distance_matrix = pdist(embeddings)
+        distance_matrix = pdist_l2(embeddings)
         distance_matrix = distance_matrix.cpu()
 
         labels = labels.cpu().data.numpy()
@@ -81,25 +81,25 @@ class FunctionNegativeTripletSelector(TripletSelector):
         return torch.LongTensor(triplets)
 
 
-def HardestNegativeTripletSelector(margin, cpu=False):
+def HardestNegativeTripletSelector(loss_margin, cpu=False):
     return FunctionNegativeTripletSelector(
-        margin=margin,
+        margin=loss_margin,
         negative_selection_fn=hardest_negative,
         cpu=cpu
     )
 
 
-def RandomNegativeTripletSelector(margin, cpu=False):
+def RandomNegativeTripletSelector(loss_margin, cpu=False):
     return FunctionNegativeTripletSelector(
-        margin=margin,
+        margin=loss_margin,
         negative_selection_fn=random_hard_negative,
         cpu=cpu
     )
 
 
-def SemihardNegativeTripletSelector(margin, cpu=False):
+def SemihardNegativeTripletSelector(loss_margin, selector_margin, cpu=False):
     return FunctionNegativeTripletSelector(
-        margin=margin,
-        negative_selection_fn=lambda x: semihard_negative(x, margin),
+        margin=loss_margin,
+        negative_selection_fn=lambda x: semihard_negative(x, margin=selector_margin),
         cpu=cpu
     )

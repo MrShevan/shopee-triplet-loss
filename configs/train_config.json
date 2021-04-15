@@ -1,5 +1,5 @@
 {
-  "config_name": "base",
+  "config_name": "finetune_pretrained_resnet50",
   "train_dataset": {
     "dataset_name": "shopee",
     "params": {
@@ -41,7 +41,7 @@
   "optimizer": {
     "optimizer_name": "adam",
     "params": {
-      "lr": 0.001
+      "lr": 0.0001
     }
   },
   "scheduler": {
@@ -55,23 +55,27 @@
   "loss": {
     "loss_name" : "triplet_loss",
     "params": {
-      "margin": 1.0
+      "margin": 0.2
     }
   },
   "triplet_selector": {
     "selector_name": "semihard_negative",
     "params": {
-      "margin": 1.0
+      "loss_margin": 0.2,
+      "selector_margin": 1.4
     }
   },
   "model":{
-    "model_name": "EmbeddingNet",
-    "path_to_save": "/data/model_without_union/"
+    "model_name": "resnet50",
+    "pretrained": true,
+    "finetune": true
   },
   "num_epochs": 240,
+  "start_epoch": 0,
   "cuda": true,
   "model_save_interval": 30,
   "log_interval": 15,
   "log_file": "/app/logs/train_model.log",
-  "tensorboard_path": "/data/logging/experiments"
+  "models_dir": "/data/models/",
+  "tensorboard_dir": "/data/logging/experiments"
 }
