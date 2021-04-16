@@ -12,6 +12,7 @@ from torchvision import transforms
 import lib.transforms as mytransforms
 
 from lib.train import train_model
+from lib.utils import load_checkpoint
 
 from utils import get_dataset
 from utils import get_loader
@@ -111,13 +112,27 @@ if __name__ == '__main__':
     )
 
     # Prepare model
-    model = get_model(
-        model_name=settings['model']['model_name'],
-        pretrained=settings['model']['pretrained'],
-        finetune=settings['model']['finetune']
-    )
-
     device, multi_gpu = get_device_name(cuda=settings['cuda'])
+
+    if settings['load_model']:
+        model = load_checkpoint(
+            '/data/models/finetune_pretrained_resnet50/model_epoch_239.pth',
+            multi_gpu
+        )
+
+        for name, param in model.named_parameters():
+            if name.find('layer4') != -1:
+                param.requires_grad = True
+
+            if name.find('fc') != -1:
+                param.requires_grad = True
+
+    else:
+        model = get_model(
+            model_name=settings['model']['model_name'],
+            pretrained=settings['model']['pretrained'],
+            finetune=settings['model']['finetune']
+        )
 
     if multi_gpu:
         model = nn.DataParallel(model)

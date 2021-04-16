@@ -44,6 +44,7 @@ def load_checkpoint(filepath: str, multi_gpu: bool = True):
 
     if multi_gpu:
         model.module.load_state_dict(checkpoint['state_dict'])
+        model = model.module
 
     else:
         model.load_state_dict(checkpoint['state_dict'])
