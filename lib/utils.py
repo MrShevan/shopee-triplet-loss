@@ -6,13 +6,10 @@ from torch.optim import lr_scheduler
 import numpy as np
 import matplotlib.pyplot as plt
 
-
-def pdist(vectors):
-    distance_matrix = -2 * vectors.mm(torch.t(vectors)) + vectors.pow(2).sum(dim=1).view(1, -1) + vectors.pow(2).sum(dim=1).view(-1, 1)
-    return distance_matrix
+from lib.distances import pdist_cosine, pdist_l2
 
 
-def compute_f1_score(dist_matrix, targets, thr=1.0):
+def compute_f1_score(dist_matrix, targets, thr=0.8):
     preds_matches = [np.where(row < thr)[0] for row in dist_matrix]
     labels_group = [np.where(targets == label)[0] for label in targets]
 
@@ -38,6 +35,7 @@ def load_checkpoint(filepath: str, multi_gpu: bool = True):
 
     if multi_gpu:
         model.module.load_state_dict(checkpoint['state_dict'])
+        model = model.module
 
     else:
         model.load_state_dict(checkpoint['state_dict'])
@@ -84,7 +82,8 @@ def imshow(
     title: str = None,
     denormalize: bool = True,
     mean: tuple = (0.485, 0.456, 0.406),
-    std: tuple = (0.229, 0.224, 0.225)
+    std: tuple = (0.229, 0.224, 0.225),
+    show_axis: bool = True
 ):
     """
     Matplotlib Imshow for Tensor
@@ -95,6 +94,7 @@ def imshow(
         denormalize:
         mean: return denormalized image
         std: return denormalized image
+        show_axis: if show axis on image
     """
     inp = inp.numpy().transpose((1, 2, 0))
 
@@ -103,6 +103,7 @@ def imshow(
         inp = np.clip(inp, 0, 1)
 
     plt.imshow(inp)
+    plt.axis('on' if show_axis else 'off')
     if title is not None:
         plt.title(title)
 
@@ -129,7 +130,8 @@ def imshow_triplet(
             ), dim=0
         )
 
-        result = pdist(embeddings).cpu().numpy()
+        result_l2 = pdist_l2(embeddings).cpu().numpy()
+        result_cosine = pdist_cosine(embeddings).cpu().numpy()
 
         # define figure
         fig = plt.figure(figsize=(15, 5))
@@ -153,8 +155,8 @@ def imshow_triplet(
         ax.imshow(positive)
         ax.axis('off')
         ax.set_title(
-            "Positive (distance : {:.2f})".format(result[0][1]),
-            color=("green" if result[0][1] < result[0][2] else "red"),
+            "Positive\nl2 distance: {:.2f}\ncosine distance: {:.2}".format(result_l2[0][1], result_cosine[0][1]),
+            color=("green" if result_l2[0][1] < result_l2[0][2] else "red"),
             size=12
         )
 
@@ -167,8 +169,8 @@ def imshow_triplet(
         ax.imshow(negative)
         ax.axis('off')
         ax.set_title(
-            "Negative (distance : {:.2f})".format(result[0][2]),
-            color=("red" if result[0][1] < result[0][2] else "green"),
+            "Negative\nl2 distance : {:.2f}\ncosine distance: {:.2}".format(result_l2[0][2], result_cosine[0][2]),
+            color=("red" if result_l2[0][1] < result_l2[0][2] else "green"),
             size=12
         )
 

@@ -9,8 +9,8 @@ from torch.utils.data import dataloader
 from torch.optim import lr_scheduler
 from torch.utils import tensorboard
 
+from lib.distances import pdist_cosine, pdist_l2
 from lib.utils import save_model
-from lib.utils import pdist
 from lib.utils import compute_f1_score
 from lib.utils import imshow_triplet
 
@@ -153,7 +153,7 @@ def train_epoch(
         optimizer.zero_grad()
         outputs = model(data)
 
-        # choose triplets
+        # choose triplets indices
         triplets = triplet_selector.get_triplets(outputs, target)
 
         if outputs.is_cuda:
@@ -180,10 +180,6 @@ def train_epoch(
         targets.append(target)
 
         if batch_idx % log_interval == 0:
-            running_loss = np.mean(losses)
-            running_pos_dists = np.mean(dists_pos)
-            running_neg_dists = np.mean(dists_neg)
-
             logging.info(
                 ' | '.join([
                     '[{:3d}/{:3d}] {:3d}%',
@@ -192,9 +188,9 @@ def train_epoch(
                     'Avg negative dist.: {:.2f}'
                 ]).format(
                     batch_idx, len(train_loader), int(100. * batch_idx / len(train_loader)),
-                    running_loss,
-                    running_pos_dists,
-                    running_neg_dists
+                    np.mean(losses),
+                    np.mean(dists_pos),
+                    np.mean(dists_neg)
                 )
             )
 
@@ -219,7 +215,7 @@ def train_epoch(
     embeddings = torch.cat(embeddings, dim=0)
     targets = torch.cat(targets, dim=0)
 
-    dist_matrix = pdist(embeddings).cpu().detach().numpy()
+    dist_matrix = pdist_l2(embeddings).cpu().detach().numpy()
     targets = targets.cpu().numpy()
 
     # metrics
@@ -286,7 +282,6 @@ def test_epoch(
             dists_pos.append(dist_pos.item())
             dists_neg.append(dist_neg.item())
 
-            losses.append(loss.item())
             val_loss += loss.item()
 
             # save embeddings and targets
@@ -294,9 +289,6 @@ def test_epoch(
             targets.append(target)
 
             if batch_idx % log_interval == 0:
-                running_loss = np.mean(losses)
-                running_pos_dists = np.mean(dists_pos)
-                running_neg_dists = np.mean(dists_neg)
 
                 logging.info(
                     ' | '.join([
@@ -306,9 +298,9 @@ def test_epoch(
                         'Avg negative dist.: {:.2f}'
                     ]).format(
                         batch_idx, len(test_loader), int(100. * batch_idx / len(test_loader)),
-                        running_loss,
-                        running_pos_dists,
-                        running_neg_dists
+                        np.mean(losses),
+                        np.mean(dists_pos),
+                        np.mean(dists_neg)
                     )
                 )
 
@@ -320,7 +312,7 @@ def test_epoch(
     embeddings = torch.cat(embeddings, dim=0)
     targets = torch.cat(targets, dim=0)
 
-    dist_matrix = pdist(embeddings).cpu().detach().numpy()
+    dist_matrix = pdist_l2(embeddings).cpu().detach().numpy()
     targets = targets.cpu().numpy()
 
     # metrics

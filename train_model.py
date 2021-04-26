@@ -12,6 +12,7 @@ from torchvision import transforms
 import lib.transforms as mytransforms
 
 from lib.train import train_model
+from lib.utils import load_checkpoint
 
 from utils import get_dataset
 from utils import get_loader
@@ -40,11 +41,12 @@ torch.nn.Module.dump_patches = True
 # TRANSFORMS
 transforms_pipeline = transforms.Compose(
     [
-        transforms.Resize((220, 220)),
-        transforms.RandomResizedCrop(220, scale=(0.6, 1.0)),
-        mytransforms.RandomResizePad(scale=(0.6, 1), fill_value=256),
         transforms.RandomHorizontalFlip(p=0.5),
+        mytransforms.RandomWatermark(p=0.5, watermarks_dir='/app/data/watermarks'),
+        mytransforms.RandomText(p=0.5, fonts_dir='/app/data/fonts'),
+        mytransforms.RandomBound(p=0.3),
         transforms.Resize((220, 220)),
+        mytransforms.RandomResizeWithPad(p=0.7, scale=(0.8, 1), fill_value=256),  # does not change size
         transforms.ToTensor(),
         transforms.Normalize(
             (0.485, 0.456, 0.406),
@@ -111,11 +113,27 @@ if __name__ == '__main__':
     )
 
     # Prepare model
-    model = get_model(
-        model_name=settings['model']['model_name']
-    )
-
     device, multi_gpu = get_device_name(cuda=settings['cuda'])
+
+    if settings['load_model']:
+        model = load_checkpoint(
+            '/data/models/layer4_pretrained_resnet50/model_epoch_44.pth',
+            multi_gpu
+        )
+
+        for name, param in model.named_parameters():
+            if name.find('layer4') != -1:
+                param.requires_grad = True
+
+            if name.find('fc') != -1:
+                param.requires_grad = True
+
+    else:
+        model = get_model(
+            model_name=settings['model']['model_name'],
+            pretrained=settings['model']['pretrained'],
+            finetune=settings['model']['finetune']
+        )
 
     if multi_gpu:
         model = nn.DataParallel(model)
@@ -136,8 +154,18 @@ if __name__ == '__main__':
     )
 
     writer = tensorboard.SummaryWriter(
-        log_dir=os.path.join(settings['tensorboard_path'], settings['config_name'])
+        log_dir=os.path.join(settings['tensorboard_dir'], settings['config_name'])
     )
+
+    # Train Parameters
+    path_to_save = os.path.join(settings['models_dir'], settings['config_name'])
+    if not os.path.exists(path_to_save):
+        os.mkdir(path_to_save)
+
+    n_epochs = settings['num_epochs']
+    start_epoch = settings['start_epoch']
+    log_interval = settings['log_interval']
+    model_save_interval = settings['model_save_interval']
 
     # Train model
     train_model(
@@ -148,11 +176,12 @@ if __name__ == '__main__':
         loss_fn=loss_fn,
         optimizer=optimizer,
         scheduler=scheduler,
-        n_epochs=settings['num_epochs'],
+        n_epochs=n_epochs,
+        start_epoch=start_epoch,
         device=device,
         multi_gpu=multi_gpu,
-        log_interval=settings['log_interval'],
-        model_save_interval=settings['model_save_interval'],
-        path_to_save=settings['model']['path_to_save'],
+        log_interval=log_interval,
+        model_save_interval=model_save_interval,
+        path_to_save=path_to_save,
         writer=writer
     )

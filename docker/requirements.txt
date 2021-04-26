@@ -15,3 +15,4 @@ pillow==8.1.2
 matplotlib==3.3.4
 tensorboard==1.15.0
 tqdm==4.60.0
+Random-Word-Generator==1.3

@@ -6,15 +6,16 @@ from torch.utils.data import DataLoader
 from torch import optim
 from torch.optim import lr_scheduler
 
-from torchvision import transforms
+from torchvision import transforms, models
 
 from lib.datasets import ShopeeDataset
-from lib.model import EmbeddingNet, TripletNet
-from lib.loss import TripletLoss, OnlineTripletLoss
+from lib.model import EmbeddingNet
+from lib.loss import TripletLoss
 from lib.sampler import BalancedBatchSampler
 from lib.triplet_selector import RandomNegativeTripletSelector,\
     HardestNegativeTripletSelector, \
-    SemihardNegativeTripletSelector
+    SemihardNegativeTripletSelector, \
+    BalancedNegativeTripletSelector
 
 
 def get_dataset(dataset_name: str, transform: transforms.Compose, params: dict):
@@ -55,12 +56,6 @@ def get_loss(loss_name: str, params: dict):
     if loss_name == 'triplet_loss':
         return TripletLoss(**params)
 
-    if loss_name == 'online_triplet_loss':
-        return OnlineTripletLoss(
-            SemihardNegativeTripletSelector(**params),
-            **params
-        )
-
     else:
         Exception('Not implemented loss!')
 
@@ -75,23 +70,42 @@ def get_triplet_selector(selector_name: str, params: dict):
     if selector_name == 'semihard_negative':
         return SemihardNegativeTripletSelector(**params)
 
+    if selector_name == 'balanced_negative':
+        return BalancedNegativeTripletSelector(**params)
+
     else:
         Exception('Not implemented triplet selector!')
 
 
-def get_model(model_name: str):
-    if model_name == 'EmbeddingNet':
-        return EmbeddingNet()
-
-    if model_name == 'TripletNet':
+def get_model(model_name: str, pretrained: bool, finetune: bool):
+    if model_name == 'embedding_net':
         embedding_net = EmbeddingNet()
-        return TripletNet(embedding_net)
+        return embedding_net
+
+    if model_name == 'resnet50':
+        embedding_net = models.resnet50(pretrained=pretrained)
+        if finetune:
+            for param in embedding_net.parameters():
+                param.requires_grad = False
+        num_ftrs = embedding_net.fc.in_features
+        embedding_net.fc = nn.Linear(num_ftrs, 224)
+
+        return embedding_net
 
     else:
         Exception('Not implemented model!')
 
 
 def get_optimizer(optimizer_name: str, model: nn.Module, params: dict):
+    params_to_update = []
+    params_names = []
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            params_to_update.append(param)
+            params_names.append(name)
+
+    logging.info("Params to learn: {}".format('\t'.join(params_names)))
+
     if optimizer_name == 'sgd':
         return optim.SGD(model.parameters(), **params)
 

@@ -1,5 +1,5 @@
 {
-  "config_name": "base",
+  "config_name": "layer4_7_pretrained_resnet50",
   "train_dataset": {
     "dataset_name": "shopee",
     "params": {
@@ -18,8 +18,8 @@
     "sampler": {
       "sampler_name": "BatchSampler",
       "params": {
-        "n_classes": 30,
-        "n_samples": 4
+        "n_classes": 10,
+        "n_samples": 20
       }
     },
     "params": {
@@ -30,8 +30,8 @@
     "sampler": {
       "sampler_name": "BatchSampler",
       "params": {
-        "n_classes": 30,
-        "n_samples": 4
+        "n_classes": 10,
+        "n_samples": 20
       }
     },
     "params": {
@@ -41,37 +41,43 @@
   "optimizer": {
     "optimizer_name": "adam",
     "params": {
-      "lr": 0.001
+      "lr": 0.000001
     }
   },
   "scheduler": {
     "scheduler_name": "step_lr",
     "params": {
-      "step_size": 80,
-      "gamma": 0.1,
+      "step_size": 60,
+      "gamma": 10,
       "last_epoch": -1
     }
   },
   "loss": {
     "loss_name" : "triplet_loss",
     "params": {
-      "margin": 1.0
+      "margin": 0.5
     }
   },
   "triplet_selector": {
-    "selector_name": "semihard_negative",
+    "selector_name": "balanced_negative",
     "params": {
-      "margin": 1.0
+      "loss_margin": 0.5,
+      "high_bound": 1.5,
+      "distance": "cosine"
     }
   },
   "model":{
-    "model_name": "EmbeddingNet",
-    "path_to_save": "/data/model_without_union/"
+    "model_name": "resnet50",
+    "pretrained": true,
+    "finetune": true
   },
-  "num_epochs": 240,
+  "load_model": true,
+  "num_epochs": 120,
+  "start_epoch": 0,
   "cuda": true,
-  "model_save_interval": 30,
+  "model_save_interval": 10,
   "log_interval": 15,
   "log_file": "/app/logs/train_model.log",
-  "tensorboard_path": "/data/logging/experiments"
+  "models_dir": "/data/models/",
+  "tensorboard_dir": "/data/logging/experiments"
 }
