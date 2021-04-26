@@ -41,11 +41,12 @@ torch.nn.Module.dump_patches = True
 # TRANSFORMS
 transforms_pipeline = transforms.Compose(
     [
-        transforms.Resize((220, 220)),
-        transforms.RandomResizedCrop(220, scale=(0.6, 1.0)),
-        mytransforms.RandomResizePad(scale=(0.6, 1), fill_value=256),
         transforms.RandomHorizontalFlip(p=0.5),
+        mytransforms.RandomWatermark(p=0.5, watermarks_dir='/app/data/watermarks'),
+        mytransforms.RandomText(p=0.5, fonts_dir='/app/data/fonts'),
+        mytransforms.RandomBound(p=0.3),
         transforms.Resize((220, 220)),
+        mytransforms.RandomResizeWithPad(p=0.7, scale=(0.8, 1), fill_value=256),  # does not change size
         transforms.ToTensor(),
         transforms.Normalize(
             (0.485, 0.456, 0.406),
@@ -116,7 +117,7 @@ if __name__ == '__main__':
 
     if settings['load_model']:
         model = load_checkpoint(
-            '/data/models/finetune_pretrained_resnet50/model_epoch_239.pth',
+            '/data/models/layer4_pretrained_resnet50/model_epoch_44.pth',
             multi_gpu
         )
 
