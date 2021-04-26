@@ -1,3 +1,4 @@
+# Запуск 
 ```bash
 python3 data_split.py --csv_path /data/shopee-product-matching/train.csv
 ```
@@ -10,3 +11,6 @@ python3 train_model.py
 ```bash
 python3 validate_model.py
 ```
+
+
+# Аугментации

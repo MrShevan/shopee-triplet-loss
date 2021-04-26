@@ -6,19 +6,10 @@ from torch.optim import lr_scheduler
 import numpy as np
 import matplotlib.pyplot as plt
 
-
-def pdist_l2(vectors):
-    distance_matrix = -2 * vectors.mm(torch.t(vectors)) + vectors.pow(2).sum(dim=1).view(1, -1) + vectors.pow(2).sum(dim=1).view(-1, 1)
-    return distance_matrix
+from lib.distances import pdist_cosine, pdist_l2
 
 
-def pdist_cosine(vectors):
-    vectors /= vectors.pow(2).sum(1, keepdim=True).sqrt()
-    distance_matrix = -2 * vectors.mm(torch.t(vectors)) + vectors.pow(2).sum(dim=1).view(1, -1) + vectors.pow(2).sum(dim=1).view(-1, 1)
-    return distance_matrix
-
-
-def compute_f1_score(dist_matrix, targets, thr=0.5):
+def compute_f1_score(dist_matrix, targets, thr=0.8):
     preds_matches = [np.where(row < thr)[0] for row in dist_matrix]
     labels_group = [np.where(targets == label)[0] for label in targets]
 
@@ -91,7 +82,8 @@ def imshow(
     title: str = None,
     denormalize: bool = True,
     mean: tuple = (0.485, 0.456, 0.406),
-    std: tuple = (0.229, 0.224, 0.225)
+    std: tuple = (0.229, 0.224, 0.225),
+    show_axis: bool = True
 ):
     """
     Matplotlib Imshow for Tensor
@@ -102,6 +94,7 @@ def imshow(
         denormalize:
         mean: return denormalized image
         std: return denormalized image
+        show_axis: if show axis on image
     """
     inp = inp.numpy().transpose((1, 2, 0))
 
@@ -110,6 +103,7 @@ def imshow(
         inp = np.clip(inp, 0, 1)
 
     plt.imshow(inp)
+    plt.axis('on' if show_axis else 'off')
     if title is not None:
         plt.title(title)
 

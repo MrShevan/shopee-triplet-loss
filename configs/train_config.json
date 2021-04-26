@@ -1,5 +1,5 @@
 {
-  "config_name": "layer4_pretrained_resnet50",
+  "config_name": "layer4_7_pretrained_resnet50",
   "train_dataset": {
     "dataset_name": "shopee",
     "params": {
@@ -18,8 +18,8 @@
     "sampler": {
       "sampler_name": "BatchSampler",
       "params": {
-        "n_classes": 30,
-        "n_samples": 4
+        "n_classes": 10,
+        "n_samples": 20
       }
     },
     "params": {
@@ -30,8 +30,8 @@
     "sampler": {
       "sampler_name": "BatchSampler",
       "params": {
-        "n_classes": 30,
-        "n_samples": 4
+        "n_classes": 10,
+        "n_samples": 20
       }
     },
     "params": {
@@ -47,7 +47,7 @@
   "scheduler": {
     "scheduler_name": "step_lr",
     "params": {
-      "step_size": 30,
+      "step_size": 60,
       "gamma": 10,
       "last_epoch": -1
     }
@@ -55,14 +55,15 @@
   "loss": {
     "loss_name" : "triplet_loss",
     "params": {
-      "margin": 0.2
+      "margin": 0.5
     }
   },
   "triplet_selector": {
-    "selector_name": "semihard_negative",
+    "selector_name": "balanced_negative",
     "params": {
-      "loss_margin": 0.2,
-      "selector_margin": 1.4
+      "loss_margin": 0.5,
+      "high_bound": 1.5,
+      "distance": "cosine"
     }
   },
   "model":{
@@ -71,10 +72,10 @@
     "finetune": true
   },
   "load_model": true,
-  "num_epochs": 90,
+  "num_epochs": 120,
   "start_epoch": 0,
   "cuda": true,
-  "model_save_interval": 15,
+  "model_save_interval": 10,
   "log_interval": 15,
   "log_file": "/app/logs/train_model.log",
   "models_dir": "/data/models/",

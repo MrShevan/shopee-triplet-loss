@@ -95,5 +95,7 @@ class ShopeeDataset(Dataset):
         return image, label
 
     def __len__(self):
-        """Get dataset length"""
+        """
+        Get dataset length
+        """
         return len(self.dataset)
