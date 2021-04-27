@@ -4,9 +4,10 @@ import numpy as np
 
 import torch
 from torch import nn
+from torch.nn import functional as f
 from torch import optim
-from torch.utils.data import dataloader
 from torch.optim import lr_scheduler
+from torch.utils.data import dataloader
 from torch.utils import tensorboard
 
 from lib.distances import pdist_cosine, pdist_l2
@@ -153,6 +154,9 @@ def train_epoch(
         optimizer.zero_grad()
         outputs = model(data)
 
+        # l2 normalization
+        outputs = f.normalize(outputs, dim=-1, p=2)
+
         # choose triplets indices
         triplets = triplet_selector.get_triplets(outputs, target)
 
@@ -164,11 +168,11 @@ def train_epoch(
         negative = outputs[triplets[:, 2]]
 
         # compute loss, backward gradients and make step
-        loss, dist_pos, dist_neg = loss_fn(anchor, positive, negative)
+        loss = loss_fn(anchor, positive, negative)
 
         losses.append(loss.item())
-        dists_pos.append(dist_pos.item())
-        dists_neg.append(dist_neg.item())
+        # dists_pos.append(dist_pos.item())
+        # dists_neg.append(dist_neg.item())
 
         total_loss += loss.item()
 
@@ -184,13 +188,13 @@ def train_epoch(
                 ' | '.join([
                     '[{:3d}/{:3d}] {:3d}%',
                     'Loss: {:.3f}',
-                    'Avg positive dist.: {:.2f}',
-                    'Avg negative dist.: {:.2f}'
+                    # 'Avg positive dist.: {:.2f}',
+                    # 'Avg negative dist.: {:.2f}'
                 ]).format(
                     batch_idx, len(train_loader), int(100. * batch_idx / len(train_loader)),
                     np.mean(losses),
-                    np.mean(dists_pos),
-                    np.mean(dists_neg)
+                    # np.mean(dists_pos),
+                    # np.mean(dists_neg)
                 )
             )
 
@@ -208,8 +212,8 @@ def train_epoch(
             )
 
             losses = []
-            dists_pos = []
-            dists_neg = []
+            # dists_pos = []
+            # dists_neg = []
 
     # compute distances and cocncat targets
     embeddings = torch.cat(embeddings, dim=0)
@@ -247,8 +251,8 @@ def test_epoch(
         model.eval()
 
         losses = []
-        dists_pos = []
-        dists_neg = []
+        # dists_pos = []
+        # dists_neg = []
 
         embeddings = []
         targets = []
@@ -265,6 +269,9 @@ def test_epoch(
             # forward
             outputs = model(data)
 
+            # l2 normalization
+            outputs = f.normalize(outputs, dim=-1, p=2)
+
             # choose triplets
             triplets = triplet_selector.get_triplets(outputs, target)
 
@@ -276,11 +283,11 @@ def test_epoch(
             negative = outputs[triplets[:, 2]]
 
             # compute loss, backward gradients and make step
-            loss, dist_pos, dist_neg = loss_fn(anchor, positive, negative)
+            loss = loss_fn(anchor, positive, negative)
 
             losses.append(loss.item())
-            dists_pos.append(dist_pos.item())
-            dists_neg.append(dist_neg.item())
+            # dists_pos.append(dist_pos.item())
+            # dists_neg.append(dist_neg.item())
 
             val_loss += loss.item()
 
@@ -294,19 +301,19 @@ def test_epoch(
                     ' | '.join([
                         '[{:3d}/{:3d}] {:3d}%',
                         'Loss: {:.3f}',
-                        'Avg positive dist.: {:.2f}',
-                        'Avg negative dist.: {:.2f}'
+                        # 'Avg positive dist.: {:.2f}',
+                        # 'Avg negative dist.: {:.2f}'
                     ]).format(
                         batch_idx, len(test_loader), int(100. * batch_idx / len(test_loader)),
                         np.mean(losses),
-                        np.mean(dists_pos),
-                        np.mean(dists_neg)
+                        # np.mean(dists_pos),
+                        # np.mean(dists_neg)
                     )
                 )
 
                 losses = []
-                dists_pos = []
-                dists_neg = []
+                # dists_pos = []
+                # dists_neg = []
 
     # compute distances and cocncat targets
     embeddings = torch.cat(embeddings, dim=0)

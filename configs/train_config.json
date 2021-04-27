@@ -1,5 +1,5 @@
 {
-  "config_name": "layer4_7_pretrained_resnet50",
+  "config_name": "base_semi_hard_new_triplet_margin_loss",
   "train_dataset": {
     "dataset_name": "shopee",
     "params": {
@@ -39,44 +39,45 @@
     }
   },
   "optimizer": {
-    "optimizer_name": "adam",
+    "optimizer_name": "sgd",
     "params": {
-      "lr": 0.000001
+      "lr": 0.05
     }
   },
   "scheduler": {
     "scheduler_name": "step_lr",
     "params": {
-      "step_size": 60,
-      "gamma": 10,
+      "step_size": 20,
+      "gamma": 0.1,
       "last_epoch": -1
     }
   },
   "loss": {
-    "loss_name" : "triplet_loss",
+    "loss_name" : "triplet_margin_loss",
     "params": {
-      "margin": 0.5
+      "margin": 1.0,
+      "p": 2,
+      "swap": true
     }
   },
   "triplet_selector": {
-    "selector_name": "balanced_negative",
+    "selector_name": "semi_hard_triplet_selector",
     "params": {
-      "loss_margin": 0.5,
-      "high_bound": 1.5,
-      "distance": "cosine"
+      "cpu": true
     }
   },
   "model":{
     "model_name": "resnet50",
     "pretrained": true,
-    "finetune": true
+    "finetune": false,
+    "embedding_size": 224
   },
-  "load_model": true,
+  "load_model": false,
   "num_epochs": 120,
   "start_epoch": 0,
   "cuda": true,
   "model_save_interval": 10,
-  "log_interval": 15,
+  "log_interval": 5,
   "log_file": "/app/logs/train_model.log",
   "models_dir": "/data/models/",
   "tensorboard_dir": "/data/logging/experiments"

@@ -6,10 +6,10 @@ from torch.optim import lr_scheduler
 import numpy as np
 import matplotlib.pyplot as plt
 
-from lib.distances import pdist_cosine, pdist_l2
+from lib.distances import pdist_l2
 
 
-def compute_f1_score(dist_matrix, targets, thr=0.8):
+def compute_f1_score(dist_matrix, targets, thr=0.5):
     preds_matches = [np.where(row < thr)[0] for row in dist_matrix]
     labels_group = [np.where(targets == label)[0] for label in targets]
 
@@ -131,7 +131,6 @@ def imshow_triplet(
         )
 
         result_l2 = pdist_l2(embeddings).cpu().numpy()
-        result_cosine = pdist_cosine(embeddings).cpu().numpy()
 
         # define figure
         fig = plt.figure(figsize=(15, 5))
@@ -155,7 +154,7 @@ def imshow_triplet(
         ax.imshow(positive)
         ax.axis('off')
         ax.set_title(
-            "Positive\nl2 distance: {:.2f}\ncosine distance: {:.2}".format(result_l2[0][1], result_cosine[0][1]),
+            "Positive\ndistance: {:.2f}".format(result_l2[0][1]),
             color=("green" if result_l2[0][1] < result_l2[0][2] else "red"),
             size=12
         )
@@ -169,7 +168,7 @@ def imshow_triplet(
         ax.imshow(negative)
         ax.axis('off')
         ax.set_title(
-            "Negative\nl2 distance : {:.2f}\ncosine distance: {:.2}".format(result_l2[0][2], result_cosine[0][2]),
+            "Negative\ndistance : {:.2f}".format(result_l2[0][2]),
             color=("red" if result_l2[0][1] < result_l2[0][2] else "green"),
             size=12
         )

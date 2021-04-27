@@ -12,10 +12,7 @@ from lib.datasets import ShopeeDataset
 from lib.model import EmbeddingNet
 from lib.loss import TripletLoss
 from lib.sampler import BalancedBatchSampler
-from lib.triplet_selector import RandomNegativeTripletSelector,\
-    HardestNegativeTripletSelector, \
-    SemihardNegativeTripletSelector, \
-    BalancedNegativeTripletSelector
+from lib.triplet_selector import HardTripletSelector, SemiHardTripletSelector
 
 
 def get_dataset(dataset_name: str, transform: transforms.Compose, params: dict):
@@ -56,28 +53,25 @@ def get_loss(loss_name: str, params: dict):
     if loss_name == 'triplet_loss':
         return TripletLoss(**params)
 
+    if loss_name == 'triplet_margin_loss':
+        return nn.TripletMarginLoss(**params)
+
     else:
         Exception('Not implemented loss!')
 
 
 def get_triplet_selector(selector_name: str, params: dict):
-    if selector_name == 'hardest_negative':
-        return HardestNegativeTripletSelector(**params)
+    if selector_name == 'hard_triplet_selector':
+        return HardTripletSelector(**params)
 
-    if selector_name == 'random_hard_negative':
-        return RandomNegativeTripletSelector(**params)
-
-    if selector_name == 'semihard_negative':
-        return SemihardNegativeTripletSelector(**params)
-
-    if selector_name == 'balanced_negative':
-        return BalancedNegativeTripletSelector(**params)
+    if selector_name == 'semi_hard_triplet_selector':
+        return SemiHardTripletSelector(**params)
 
     else:
         Exception('Not implemented triplet selector!')
 
 
-def get_model(model_name: str, pretrained: bool, finetune: bool):
+def get_model(model_name: str, pretrained: bool, finetune: bool, embedding_size: int = 224):
     if model_name == 'embedding_net':
         embedding_net = EmbeddingNet()
         return embedding_net
@@ -88,7 +82,7 @@ def get_model(model_name: str, pretrained: bool, finetune: bool):
             for param in embedding_net.parameters():
                 param.requires_grad = False
         num_ftrs = embedding_net.fc.in_features
-        embedding_net.fc = nn.Linear(num_ftrs, 224)
+        embedding_net.fc = nn.Linear(num_ftrs, embedding_size)
 
         return embedding_net
 

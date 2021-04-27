@@ -132,7 +132,8 @@ if __name__ == '__main__':
         model = get_model(
             model_name=settings['model']['model_name'],
             pretrained=settings['model']['pretrained'],
-            finetune=settings['model']['finetune']
+            finetune=settings['model']['finetune'],
+            embedding_size=settings['model']['embedding_size']
         )
 
     if multi_gpu:
