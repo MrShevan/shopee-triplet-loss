@@ -10,7 +10,7 @@ from torch.optim import lr_scheduler
 from torch.utils.data import dataloader
 from torch.utils import tensorboard
 
-from lib.distances import pdist_cosine, pdist_l2
+from lib.distances import pdist_l2
 from lib.utils import save_model
 from lib.utils import compute_f1_score
 from lib.utils import imshow_triplet
@@ -32,7 +32,7 @@ def train_model(
     log_interval: int,
     model_save_interval: int,
     writer: tensorboard.SummaryWriter,
-    start_epoch: int = 0,
+    start_epoch: int = 1,
     path_to_save: str = ''
 ):
     """
@@ -60,14 +60,14 @@ def train_model(
         start_epoch:
         path_to_save:
     """
-    for epoch in range(0, start_epoch):
+    for epoch in range(1, start_epoch):
         scheduler.step()
 
     for epoch in range(start_epoch, n_epochs):
         scheduler.step()
 
         # Train stage
-        logging.info(f'Train Epoch: {epoch + 1}/{n_epochs}')
+        logging.info(f'Train Epoch: {epoch}/{n_epochs}')
 
         model, train_loss, train_f1 = train_epoch(
             train_loader=train_loader,
@@ -91,7 +91,7 @@ def train_model(
             save_model(epoch, model, optimizer, scheduler, modelpath, multi_gpu)
 
         # Test stage
-        logging.info(f'Test Epoch: {epoch + 1}/{n_epochs}')
+        logging.info(f'Test Epoch: {epoch}/{n_epochs}')
 
         test_loss, test_f1 = test_epoch(
             test_loader=test_loader,
@@ -135,8 +135,6 @@ def train_epoch(
     model.train()
 
     losses = []
-    dists_pos = []
-    dists_neg = []
 
     embeddings = []
     targets = []
@@ -171,8 +169,6 @@ def train_epoch(
         loss = loss_fn(anchor, positive, negative)
 
         losses.append(loss.item())
-        # dists_pos.append(dist_pos.item())
-        # dists_neg.append(dist_neg.item())
 
         total_loss += loss.item()
 
@@ -187,14 +183,10 @@ def train_epoch(
             logging.info(
                 ' | '.join([
                     '[{:3d}/{:3d}] {:3d}%',
-                    'Loss: {:.3f}',
-                    # 'Avg positive dist.: {:.2f}',
-                    # 'Avg negative dist.: {:.2f}'
+                    'Loss: {:.3f}'
                 ]).format(
                     batch_idx, len(train_loader), int(100. * batch_idx / len(train_loader)),
-                    np.mean(losses),
-                    # np.mean(dists_pos),
-                    # np.mean(dists_neg)
+                    np.mean(losses)
                 )
             )
 
@@ -212,10 +204,8 @@ def train_epoch(
             )
 
             losses = []
-            # dists_pos = []
-            # dists_neg = []
 
-    # compute distances and cocncat targets
+    # compute distances and concat targets
     embeddings = torch.cat(embeddings, dim=0)
     targets = torch.cat(targets, dim=0)
 
@@ -251,8 +241,6 @@ def test_epoch(
         model.eval()
 
         losses = []
-        # dists_pos = []
-        # dists_neg = []
 
         embeddings = []
         targets = []
@@ -286,8 +274,6 @@ def test_epoch(
             loss = loss_fn(anchor, positive, negative)
 
             losses.append(loss.item())
-            # dists_pos.append(dist_pos.item())
-            # dists_neg.append(dist_neg.item())
 
             val_loss += loss.item()
 
@@ -300,22 +286,16 @@ def test_epoch(
                 logging.info(
                     ' | '.join([
                         '[{:3d}/{:3d}] {:3d}%',
-                        'Loss: {:.3f}',
-                        # 'Avg positive dist.: {:.2f}',
-                        # 'Avg negative dist.: {:.2f}'
+                        'Loss: {:.3f}'
                     ]).format(
                         batch_idx, len(test_loader), int(100. * batch_idx / len(test_loader)),
-                        np.mean(losses),
-                        # np.mean(dists_pos),
-                        # np.mean(dists_neg)
+                        np.mean(losses)
                     )
                 )
 
                 losses = []
-                # dists_pos = []
-                # dists_neg = []
 
-    # compute distances and cocncat targets
+    # compute distances and concat targets
     embeddings = torch.cat(embeddings, dim=0)
     targets = torch.cat(targets, dim=0)
 

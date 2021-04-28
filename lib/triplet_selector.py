@@ -67,6 +67,16 @@ class SemiHardTripletSelector(TripletSelector):
         super(SemiHardTripletSelector, self).__init__()
         self.cpu = cpu
 
+    @staticmethod
+    def _minimum_hard_negative(an_distances, ap_distance):
+        # make dists lower than ap_distances as max_distance, higher as zero
+        lower_idxs = (ap_distance > an_distances) * an_distances.max()
+
+        # make dists lower than ap_distances as zero, higher without changes
+        higher_idxs = (ap_distance < an_distances) * an_distances
+
+        return np.argmin(lower_idxs + higher_idxs)
+
     def get_triplets(self, embeddings, labels):
         with torch.no_grad():
             if self.cpu:
@@ -100,11 +110,11 @@ class SemiHardTripletSelector(TripletSelector):
                         torch.LongTensor(negative_indices)
                     ]
 
-                    negative_idx = np.argmin((ap_distance < an_distances) * an_distances + an_distances.max() * (ap_distance > an_distances))
+                    hard_negative = self._minimum_hard_negative(an_distances, ap_distance)
 
-                    hard_negative = negative_indices[negative_idx]
-
-                    triplets.append([anchor_positive[0], anchor_positive[1], hard_negative])
+                    triplets.append(
+                        [anchor_positive[0], anchor_positive[1], negative_indices[hard_negative]]
+                    )
 
             triplets = np.array(triplets)
 

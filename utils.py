@@ -1,3 +1,4 @@
+import os
 import logging
 
 import torch
@@ -9,8 +10,6 @@ from torch.optim import lr_scheduler
 from torchvision import transforms, models
 
 from lib.datasets import ShopeeDataset
-from lib.model import EmbeddingNet
-from lib.loss import TripletLoss
 from lib.sampler import BalancedBatchSampler
 from lib.triplet_selector import HardTripletSelector, SemiHardTripletSelector
 
@@ -50,9 +49,6 @@ def get_loader(dataset: ShopeeDataset, sampler: dict, params: dict):
 
 
 def get_loss(loss_name: str, params: dict):
-    if loss_name == 'triplet_loss':
-        return TripletLoss(**params)
-
     if loss_name == 'triplet_margin_loss':
         return nn.TripletMarginLoss(**params)
 
@@ -72,10 +68,6 @@ def get_triplet_selector(selector_name: str, params: dict):
 
 
 def get_model(model_name: str, pretrained: bool, finetune: bool, embedding_size: int = 224):
-    if model_name == 'embedding_net':
-        embedding_net = EmbeddingNet()
-        return embedding_net
-
     if model_name == 'resnet50':
         embedding_net = models.resnet50(pretrained=pretrained)
         if finetune:
