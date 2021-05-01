@@ -1,12 +1,23 @@
 {
+  "config_name": "semi_hard_new_triplet_margin_loss_1",
   "val_dataset": {
+    "dataset_name": "shopee",
+    "params": {
+      "dataset_path": "/data/shopee-product-matching/new_val.csv",
+      "images_dir": "/data/shopee-product-matching/train_images"
+    }
   },
   "val_loader": {
+    "sampler": {},
+    "params": {
+      "batch_size": 64,
+      "shuffle": false
+    }
   },
-  "model":{
-    "model_name": "EmbeddingNet",
-    "path_to_save": "data/models/"
-  },
+  "f1_thr": 0.15,
   "cuda": true,
-  "log_interval": 15
+  "log_interval": 15,
+  "log_file": "/app/logs/train_model.log",
+  "models_dir": "/data/models/",
+  "tensorboard_dir": "/data/logging/experiments"
 }

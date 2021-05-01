@@ -6,13 +6,13 @@ import argparse
 
 import torch
 import torch.nn as nn
+
 from torch.utils import tensorboard
 
 from torchvision import transforms
 import lib.transforms as mytransforms
 
 from lib.train import train_model
-from lib.utils import load_checkpoint
 
 from utils import get_dataset
 from utils import get_loader
@@ -115,25 +115,12 @@ if __name__ == '__main__':
     # Prepare model
     device, multi_gpu = get_device_name(cuda=settings['cuda'])
 
-    if settings['load_model']:
-        model = load_checkpoint(
-            '/data/models/layer4_pretrained_resnet50/model_epoch_44.pth',
-            multi_gpu
-        )
-
-        for name, param in model.named_parameters():
-            if name.find('layer4') != -1:
-                param.requires_grad = True
-
-            if name.find('fc') != -1:
-                param.requires_grad = True
-
-    else:
-        model = get_model(
+    model = get_model(
             model_name=settings['model']['model_name'],
             pretrained=settings['model']['pretrained'],
-            finetune=settings['model']['finetune']
-        )
+            finetune=settings['model']['finetune'],
+            embedding_size=settings['model']['embedding_size']
+    )
 
     if multi_gpu:
         model = nn.DataParallel(model)
@@ -158,14 +145,34 @@ if __name__ == '__main__':
     )
 
     # Train Parameters
-    path_to_save = os.path.join(settings['models_dir'], settings['config_name'])
-    if not os.path.exists(path_to_save):
-        os.mkdir(path_to_save)
-
     n_epochs = settings['num_epochs']
     start_epoch = settings['start_epoch']
     log_interval = settings['log_interval']
     model_save_interval = settings['model_save_interval']
+
+    # Model Directory
+    path_to_save = os.path.join(settings["models_dir"], settings["config_name"])
+    if not os.path.exists(path_to_save):
+        os.mkdir(path_to_save)
+
+    # Load checkpoint
+    if os.listdir(path_to_save):
+        model2epoch = {model: int(model.split('_')[-1].split('.')[0]) for model in
+                       os.listdir(path_to_save)}
+        last_model = max(model2epoch, key=lambda k: model2epoch[k])
+
+        logging.info(f'Load model: {os.path.join(path_to_save, last_model)}')
+
+        checkpoint = torch.load(os.path.join(path_to_save, last_model))
+
+        if multi_gpu:
+            model.module.load_state_dict(checkpoint['state_dict'])
+
+        else:
+            model.load_state_dict(checkpoint['state_dict'])
+
+        start_epoch = checkpoint['epoch'] + 1
+        optimizer.load_state_dict(checkpoint['optimizer'])
 
     # Train model
     train_model(
