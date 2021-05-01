@@ -211,12 +211,15 @@ class RandomWatermark(torch.nn.Module):
         max_position_w = width - watermark_width
         max_position_h = height - watermark_height
 
-        position_x = 2
-        position_y = 2
+        center_w = max_position_w // 2
+        center_h = max_position_h // 2
+
+        position_x = center_w
+        position_y = center_h
         # bad if watermark in central crop
-        while position_x == max_position_w // 2 and position_y == max_position_h // 2:
-            position_x = np.random.choice([0, max_position_w // 2, max_position_w])
-            position_y = np.random.choice([0, max_position_h // 2, max_position_h])
+        while position_x == center_w and position_y == center_h:
+            position_x = np.random.choice([0, center_w, max_position_w])
+            position_y = np.random.choice([0, center_h, max_position_h])
 
         return position_x, position_y
 
