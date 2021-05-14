@@ -1,16 +1,16 @@
 {
-  "config_name": "semi_hard_new_triplet_margin_loss_1",
+  "config_name": "base",
   "train_dataset": {
     "dataset_name": "shopee",
     "params": {
-      "dataset_path": "/data/shopee-product-matching/new_train.csv",
+      "dataset_path": "/data/shopee-product-matching/full_train.csv",
       "images_dir": "/data/shopee-product-matching/train_images"
     }
   },
   "test_dataset": {
     "dataset_name": "shopee",
     "params": {
-      "dataset_path": "/data/shopee-product-matching/new_test.csv",
+      "dataset_path": "/data/shopee-product-matching/full_test.csv",
       "images_dir": "/data/shopee-product-matching/train_images"
     }
   },
@@ -18,36 +18,36 @@
     "sampler": {
       "sampler_name": "BatchSampler",
       "params": {
-        "n_classes": 10,
+        "n_classes": 20,
         "n_samples": 20
       }
     },
     "params": {
-      "num_workers": 0
+      "num_workers": 4
     }
   },
   "test_loader": {
     "sampler": {
       "sampler_name": "BatchSampler",
       "params": {
-        "n_classes": 10,
+        "n_classes": 20,
         "n_samples": 20
       }
     },
     "params": {
-      "num_workers": 0
+      "num_workers": 4
     }
   },
   "optimizer": {
     "optimizer_name": "sgd",
     "params": {
-      "lr": 0.05
+      "lr": 0.5
     }
   },
   "scheduler": {
     "scheduler_name": "step_lr",
     "params": {
-      "step_size": 80,
+      "step_size": 100,
       "gamma": 0.1,
       "last_epoch": -1
     }
@@ -72,8 +72,9 @@
     "finetune": false,
     "embedding_size": 224
   },
-  "num_epochs": 200,
+  "num_epochs": 300,
   "start_epoch": 1,
+  "n_neighbors": 50,
   "cuda": true,
   "model_save_interval": 10,
   "log_interval": 5,

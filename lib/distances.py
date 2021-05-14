@@ -1,12 +1,21 @@
 import torch
 
 
-def pdist_l2(vectors):
-    distance_matrix = -2 * vectors.mm(torch.t(vectors)) + vectors.pow(2).sum(dim=1).view(1, -1) + vectors.pow(2).sum(dim=1).view(-1, 1)
-    return distance_matrix
+def knn(vectors, n_neighbors, device):
+    if device.type == 'cuda':
+        vectors = vectors.to(device)
 
+    # Compute distances
+    distance_matrix = torch.cdist(vectors, vectors, p=2.0)
 
-def pdist_cosine(vectors):
-    vectors /= vectors.pow(2).sum(1, keepdim=True).sqrt()
-    distance_matrix = -2 * vectors.mm(torch.t(vectors)) + vectors.pow(2).sum(dim=1).view(1, -1) + vectors.pow(2).sum(dim=1).view(-1, 1)
-    return distance_matrix
+    # Compute top neighbors
+    distances, indices = torch.topk(distance_matrix, k=n_neighbors, dim=1,
+                                    largest=False, sorted=True)
+
+    del distance_matrix
+
+    vectors = vectors.detach().cpu()
+    indices = indices.detach().cpu().numpy()
+    distances = distances.detach().cpu().numpy()
+
+    return distances, indices

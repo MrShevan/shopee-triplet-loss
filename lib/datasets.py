@@ -29,13 +29,16 @@ class ShopeeDataset(Dataset):
         self.transform = transform
 
         self.filepath = self.dataset.filepath.values
-        self.labels = self.dataset.label_group.values
-        self.labels_set = set(self.labels)
 
-        self.label_to_indices = {
-            label: np.where(self.labels == label)[0]
-            for label in self.labels_set
-        }
+        self.labels = [0] * len(self.dataset)
+        if 'label_group' in self.dataset.columns:
+            self.labels = self.dataset.label_group.values
+            self.labels_set = set(self.labels)
+
+            self.label_to_indices = {
+                label: np.where(self.labels == label)[0]
+                for label in self.labels_set
+            }
 
     @staticmethod
     def _dataset_prepare(path: str, images_dir: str):
@@ -69,15 +72,6 @@ class ShopeeDataset(Dataset):
             raise Exception(e)
 
         return image
-
-    def _get_neighbours(self, label: int):
-        """
-        Get images indixes with same label_group
-
-         Args:
-            label: target label_group
-        """
-        return self.label_to_indices[label]
 
     def __getitem__(self, index: int):
         """

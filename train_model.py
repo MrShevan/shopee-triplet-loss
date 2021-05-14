@@ -42,11 +42,12 @@ torch.nn.Module.dump_patches = True
 transforms_pipeline = transforms.Compose(
     [
         transforms.RandomHorizontalFlip(p=0.5),
-        mytransforms.RandomWatermark(p=0.5, watermarks_dir='/app/data/watermarks'),
-        mytransforms.RandomText(p=0.5, fonts_dir='/app/data/fonts'),
-        mytransforms.RandomBound(p=0.3),
-        transforms.Resize((220, 220)),
-        mytransforms.RandomResizeWithPad(p=0.7, scale=(0.8, 1), fill_value=256),  # does not change size
+        mytransforms.RandomWatermark(p=0.6, watermarks_dir='/app/data/watermarks'),
+        mytransforms.RandomWatermark(p=0.6, watermarks_dir='/app/data/watermarks'),
+        mytransforms.RandomText(p=0.7, fonts_dir='/app/data/fonts'),
+        mytransforms.RandomBound(p=0.4),
+        transforms.Resize((224, 224)),
+        mytransforms.RandomResizeWithPad(p=0.7, scale=(0.7, 1), fill_value=256),
         transforms.ToTensor(),
         transforms.Normalize(
             (0.485, 0.456, 0.406),
@@ -149,6 +150,7 @@ if __name__ == '__main__':
     start_epoch = settings['start_epoch']
     log_interval = settings['log_interval']
     model_save_interval = settings['model_save_interval']
+    n_neighbors = settings['n_neighbors']
 
     # Model Directory
     path_to_save = os.path.join(settings["models_dir"], settings["config_name"])
@@ -187,6 +189,7 @@ if __name__ == '__main__':
         start_epoch=start_epoch,
         device=device,
         multi_gpu=multi_gpu,
+        n_neighbors=n_neighbors,
         log_interval=log_interval,
         model_save_interval=model_save_interval,
         path_to_save=path_to_save,

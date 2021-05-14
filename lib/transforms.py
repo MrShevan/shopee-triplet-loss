@@ -216,7 +216,6 @@ class RandomWatermark(torch.nn.Module):
 
         position_x = center_w
         position_y = center_h
-        # bad if watermark in central crop
         while position_x == center_w and position_y == center_h:
             position_x = np.random.choice([0, center_w, max_position_w])
             position_y = np.random.choice([0, center_h, max_position_h])

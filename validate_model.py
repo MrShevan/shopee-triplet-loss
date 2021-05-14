@@ -3,6 +3,8 @@ import json
 import argparse
 import logging
 
+import pandas as pd
+
 from torchvision import transforms
 
 from utils import get_dataset
@@ -12,11 +14,12 @@ from utils import get_device_name
 from lib.validate import validate_model
 
 from lib.utils import load_checkpoint
+from lib.utils import compute_phash_baseline
 
 # TRANSFORMS
 transforms_pipeline = transforms.Compose(
     [
-        transforms.Resize((220, 220)),
+        transforms.Resize((224, 224)),
         transforms.ToTensor(),
         transforms.Normalize(
             (0.485, 0.456, 0.406),
@@ -24,6 +27,17 @@ transforms_pipeline = transforms.Compose(
         ),
     ]
 )
+
+
+def compute_phash_baseline(df: pd.DataFrame):
+    tmp = df.reset_index().groupby('image_phash').index.agg('unique').to_dict()
+    preds_matches = df.image_phash.map(tmp).values
+
+    labels = df.label_group.values
+    labels_group = [np.where(labels == label)[0] for label in labels]
+
+    return f1_score(labels_group, preds_matches)
+
 
 
 if __name__ == '__main__':
@@ -45,7 +59,6 @@ if __name__ == '__main__':
         handlers=[logging.FileHandler(settings['log_file']), logging.StreamHandler()]
     )
 
-    logging.info(f'F1 Score Threshold: {settings["f1_thr"]}')
     # Make Dataset
     val_dataset = get_dataset(
         dataset_name=settings["val_dataset"]["dataset_name"],
@@ -75,6 +88,8 @@ if __name__ == '__main__':
         multi_gpu
     )
 
+    logging.info(f'F1 Score Threshold: {settings["f1_thr"]}')
+
     log_interval = settings['log_interval']
     f1_thr = settings['f1_thr']
 
@@ -86,3 +101,7 @@ if __name__ == '__main__':
         device=device,
         log_interval=log_interval
     )
+
+    # Phash baseline
+    phash_score = compute_phash_baseline(val_dataset.dataset)
+    logging.info(f'Phash baseline: {phash_score:.4f}')

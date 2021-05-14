@@ -3,8 +3,6 @@ from itertools import combinations
 import numpy as np
 import torch
 
-from lib.distances import pdist_l2
-
 
 class TripletSelector:
     """
@@ -37,7 +35,7 @@ class HardTripletSelector(TripletSelector):
             if self.cpu:
                 embeddings = embeddings.cpu()
 
-            distance_matrix = pdist_l2(embeddings)
+            distance_matrix = torch.cdist(embeddings, embeddings, p=2.0)
             distance_matrix = distance_matrix.cpu()
 
             labels = labels.cpu().data.numpy()
@@ -82,7 +80,7 @@ class SemiHardTripletSelector(TripletSelector):
             if self.cpu:
                 embeddings = embeddings.cpu()
 
-            distance_matrix = pdist_l2(embeddings)
+            distance_matrix = torch.cdist(embeddings, embeddings, p=2.0)
             distance_matrix = distance_matrix.cpu()
 
             labels = labels.cpu().data.numpy()

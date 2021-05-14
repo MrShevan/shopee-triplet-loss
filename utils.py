@@ -77,6 +77,16 @@ def get_model(model_name: str, pretrained: bool, finetune: bool, embedding_size:
 
         return embedding_net
 
+    if model_name == 'resnext101':
+        embedding_net = models.resnext101_32x8d(pretrained=pretrained)
+        if finetune:
+            for param in embedding_net.parameters():
+                param.requires_grad = False
+        num_ftrs = embedding_net.fc.in_features
+        embedding_net.fc = nn.Linear(num_ftrs, embedding_size)
+
+        return embedding_net
+
     else:
         Exception('Not implemented model!')
 

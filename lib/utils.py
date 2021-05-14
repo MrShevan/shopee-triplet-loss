@@ -1,4 +1,5 @@
 import torch
+
 from torch import nn
 from torch import optim
 from torch.optim import lr_scheduler
@@ -6,12 +7,8 @@ from torch.optim import lr_scheduler
 import numpy as np
 import matplotlib.pyplot as plt
 
-from lib.distances import pdist_l2
 
-
-def compute_f1_score(dist_matrix, targets, thr=0.5):
-    preds_matches = [np.where(row < thr)[0] for row in dist_matrix]
-    labels_group = [np.where(targets == label)[0] for label in targets]
+def f1_score(labels_group, preds_matches):
 
     f1_scores = []
     for labels_row, matches_row in zip(labels_group, preds_matches):
@@ -130,7 +127,7 @@ def imshow_triplet(
             ), dim=0
         )
 
-        result_l2 = pdist_l2(embeddings).cpu().numpy()
+        result_l2 = torch.cdist(embeddings, embeddings, p=2.0).cpu().numpy()
 
         # define figure
         fig = plt.figure(figsize=(15, 5))

@@ -76,6 +76,8 @@ python3 validate_model.py
 
 # Генерация триплетов
 
+
+
 Примеры получившихся триплетов:
 
    ![alt](doc/triplets_1.png)
@@ -83,3 +85,6 @@ python3 validate_model.py
    ![alt](doc/triplets_2.png)
     
    ![alt](doc/triplets_3.png)
+   
+ 
+# Архитектуры моделей

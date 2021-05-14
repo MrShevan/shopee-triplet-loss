@@ -10,9 +10,9 @@ from torch.optim import lr_scheduler
 from torch.utils.data import dataloader
 from torch.utils import tensorboard
 
-from lib.distances import pdist_l2
+from lib.distances import knn
 from lib.utils import save_model
-from lib.utils import compute_f1_score
+from lib.utils import f1_score
 from lib.utils import imshow_triplet
 
 from lib.triplet_selector import TripletSelector
@@ -29,6 +29,7 @@ def train_model(
     n_epochs: int,
     device: torch.device,
     multi_gpu: bool,
+    n_neighbors: int,
     log_interval: int,
     model_save_interval: int,
     writer: tensorboard.SummaryWriter,
@@ -54,6 +55,7 @@ def train_model(
         n_epochs:
         device:
         multi_gpu:
+        n_neighbors:
         log_interval:
         model_save_interval:
         writer:
@@ -69,19 +71,21 @@ def train_model(
         # Train stage
         logging.info(f'Train Epoch: {epoch}/{n_epochs}')
 
-        model, train_loss, train_f1 = train_epoch(
+        model, train_loss, train_f1, threshold = train_epoch(
             train_loader=train_loader,
             triplet_selector=triplet_selector,
             model=model,
             loss_fn=loss_fn,
             optimizer=optimizer,
             device=device,
+            n_neighbors=n_neighbors,
             log_interval=log_interval,
             writer=writer
         )
 
         logging.info(f'Train epoch Loss: {train_loss:.4f}')
         logging.info(f'Train epoch F1: {train_f1:.4f}')
+        logging.info(f'Train Threshold: {threshold:.4f}')
 
         writer.add_scalar(f'Train Loss', train_loss, epoch)
         writer.add_scalar(f'Train F1', train_f1, epoch)
@@ -99,6 +103,8 @@ def train_model(
             model=model,
             loss_fn=loss_fn,
             device=device,
+            threshold=threshold,
+            n_neighbors=n_neighbors,
             log_interval=log_interval
         )
 
@@ -116,6 +122,7 @@ def train_epoch(
     loss_fn: nn.Module,
     optimizer: optim.Optimizer,
     device: torch.device,
+    n_neighbors: int,
     log_interval: int,
     writer: tensorboard.SummaryWriter
 ):
@@ -156,20 +163,19 @@ def train_epoch(
         outputs = f.normalize(outputs, dim=-1, p=2)
 
         # choose triplets indices
-        triplets = triplet_selector.get_triplets(outputs, target)
+        triplets_indices = triplet_selector.get_triplets(outputs, target)
 
-        if outputs.is_cuda:
-            triplets = triplets.cuda()
+        if device.type == 'cuda':
+            triplets_indices = triplets_indices.to(device)
 
-        anchor = outputs[triplets[:, 0]]
-        positive = outputs[triplets[:, 1]]
-        negative = outputs[triplets[:, 2]]
+        anchor = outputs[triplets_indices[:, 0]]
+        positive = outputs[triplets_indices[:, 1]]
+        negative = outputs[triplets_indices[:, 2]]
 
         # compute loss, backward gradients and make step
         loss = loss_fn(anchor, positive, negative)
 
         losses.append(loss.item())
-
         total_loss += loss.item()
 
         loss.backward()
@@ -179,12 +185,10 @@ def train_epoch(
         embeddings.append(outputs)
         targets.append(target)
 
+        # logging
         if batch_idx % log_interval == 0:
             logging.info(
-                ' | '.join([
-                    '[{:3d}/{:3d}] {:3d}%',
-                    'Loss: {:.3f}'
-                ]).format(
+                '[{:3d}/{:3d}] {:3d}% | Loss: {:.3f}'.format(
                     batch_idx, len(train_loader), int(100. * batch_idx / len(train_loader)),
                     np.mean(losses)
                 )
@@ -193,29 +197,49 @@ def train_epoch(
             writer.add_figure(
                 'Train Triplet',
                 imshow_triplet(
-                    data[triplets[0][0]],
-                    anchor[0],
-                    data[triplets[0][1]],
-                    positive[0],
-                    data[triplets[0][2]],
-                    negative[0]
+                    data[triplets_indices[0][0]], anchor[0],
+                    data[triplets_indices[0][1]], positive[0],
+                    data[triplets_indices[0][2]], negative[0]
                 ),
                 batch_idx
             )
 
             losses = []
 
-    # compute distances and concat targets
+    # concat targets and compute distances
     embeddings = torch.cat(embeddings, dim=0)
     targets = torch.cat(targets, dim=0)
 
-    dist_matrix = pdist_l2(embeddings).cpu().detach().numpy()
-    targets = targets.cpu().numpy()
+    distances, indices = knn(embeddings, n_neighbors, device)
 
-    # metrics
+    # finding threshold and compute f1 score
+    targets = targets.detach().cpu().numpy()
+    labels = [np.where(targets == label)[0] for label in targets]
+    x, y = [], []
+
+    bins = np.arange(0.05, 1.0, 0.05)
+
+    logging.info('Threshold searching...')
+    for i, thr in enumerate(bins):
+        predictions = []
+        for k in range(embeddings.shape[0]):
+            idx = np.where(distances[k,] < thr)[0]
+            ids = indices[k, idx]
+
+            predictions.append(ids)
+
+        logging.info('[{:3d}/{:3d}] {:3d}%'.format(
+            i + 1, len(bins), int(100. * (i + 1) / len(bins))
+        ))
+
+        y.append(f1_score(labels, predictions))
+        x.append(thr)
+
+    threshold = x[np.argmax(y)]
+    score = y[np.argmax(y)]
+
     total_loss /= (batch_idx + 1)
-    f1_score = compute_f1_score(dist_matrix, targets)
-    return model, total_loss, f1_score
+    return model, total_loss, score, threshold
 
 
 def test_epoch(
@@ -224,6 +248,8 @@ def test_epoch(
     model: nn.Module,
     loss_fn: nn.Module,
     device: torch.device,
+    threshold: float,
+    n_neighbors: int,
     log_interval: int
 ):
     """
@@ -235,6 +261,8 @@ def test_epoch(
         model:
         loss_fn:
         device:
+        threshold:
+        n_neighbors:
         log_interval:
     """
     with torch.no_grad():
@@ -261,18 +289,17 @@ def test_epoch(
             outputs = f.normalize(outputs, dim=-1, p=2)
 
             # choose triplets
-            triplets = triplet_selector.get_triplets(outputs, target)
+            triplets_indices = triplet_selector.get_triplets(outputs, target)
 
             if outputs.is_cuda:
-                triplets = triplets.cuda()
+                triplets_indices = triplets_indices.cuda()
 
-            anchor = outputs[triplets[:, 0]]
-            positive = outputs[triplets[:, 1]]
-            negative = outputs[triplets[:, 2]]
+            anchor = outputs[triplets_indices[:, 0]]
+            positive = outputs[triplets_indices[:, 1]]
+            negative = outputs[triplets_indices[:, 2]]
 
             # compute loss, backward gradients and make step
             loss = loss_fn(anchor, positive, negative)
-
             losses.append(loss.item())
 
             val_loss += loss.item()
@@ -281,13 +308,10 @@ def test_epoch(
             embeddings.append(outputs)
             targets.append(target)
 
+            # logging
             if batch_idx % log_interval == 0:
-
                 logging.info(
-                    ' | '.join([
-                        '[{:3d}/{:3d}] {:3d}%',
-                        'Loss: {:.3f}'
-                    ]).format(
+                    '[{:3d}/{:3d}] {:3d}% | Loss: {:.3f}'.format(
                         batch_idx, len(test_loader), int(100. * batch_idx / len(test_loader)),
                         np.mean(losses)
                     )
@@ -295,14 +319,24 @@ def test_epoch(
 
                 losses = []
 
-    # compute distances and concat targets
+    # concat targets and compute distances
     embeddings = torch.cat(embeddings, dim=0)
     targets = torch.cat(targets, dim=0)
 
-    dist_matrix = pdist_l2(embeddings).cpu().detach().numpy()
-    targets = targets.cpu().numpy()
+    distances, indices = knn(embeddings, n_neighbors, device)
 
-    # metrics
+    # compute f1 score
+    targets = targets.detach().cpu().numpy()
+    labels = [np.where(targets == label)[0] for label in targets]
+
+    predictions = []
+    for k in range(embeddings.shape[0]):
+        idx = np.where(distances[k,] < threshold)[0]
+        ids = indices[k, idx]
+
+        predictions.append(ids)
+
+    score = f1_score(labels, predictions)
+
     val_loss /= (batch_idx + 1)
-    f1_score = compute_f1_score(dist_matrix, targets)
-    return val_loss, f1_score
+    return val_loss, score
