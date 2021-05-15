@@ -89,6 +89,7 @@ def train_model(
 
         writer.add_scalar(f'Train Loss', train_loss, epoch)
         writer.add_scalar(f'Train F1', train_f1, epoch)
+        writer.add_scalar(f'Train Threshold', threshold, epoch)
 
         if (epoch + 1) % model_save_interval == 0:
             modelpath = os.path.join(path_to_save, f'model_epoch_{epoch}.pth')

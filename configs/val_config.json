@@ -14,7 +14,7 @@
       "shuffle": false
     }
   },
-  "f1_thr": 0.1,
+  "n_neighbors": 50,
   "cuda": true,
   "log_interval": 15,
   "log_file": "/app/logs/train_model.log",

@@ -1,25 +1,20 @@
-import os
 import logging
 import numpy as np
 
 import torch
 from torch import nn
 from torch.nn import functional as f
-from torch import optim
-from torch.optim import lr_scheduler
 from torch.utils.data import dataloader
 from torch.utils import tensorboard
 
-from lib.distances import pdist_l2
-from lib.utils import save_model
-from lib.utils import compute_f1_score
-from lib.utils import imshow_triplet
+from lib.distances import knn
+from lib.utils import f1_score
 
 
 def validate_model(
     val_loader: dataloader.DataLoader,
     model: nn.Module,
-    f1_thr: float,
+    n_neighbors: int,
     device: torch.device,
     log_interval: int,
     writer: tensorboard.SummaryWriter = None
@@ -36,15 +31,16 @@ def validate_model(
     # Val stage
     logging.info('Val Epoch')
 
-    val_f1 = val_epoch(
+    val_f1, thr_f1 = val_epoch(
         val_loader=val_loader,
         model=model,
-        f1_thr=f1_thr,
+        n_neighbors=n_neighbors,
         device=device,
         log_interval=log_interval
     )
 
     logging.info(f'Val epoch F1: {val_f1:.4f}')
+    logging.info(f'Threshold: {thr_f1:.4f}')
 
     if writer:
         writer.add_scalar(f'Val F1', val_f1, 1)
@@ -53,7 +49,7 @@ def validate_model(
 def val_epoch(
     val_loader: dataloader.DataLoader,
     model: nn.Module,
-    f1_thr: float,
+    n_neighbors: int,
     device: torch.device,
     log_interval: int
 ):
@@ -102,9 +98,32 @@ def val_epoch(
     embeddings = torch.cat(embeddings, dim=0)
     targets = torch.cat(targets, dim=0)
 
-    dist_matrix = pdist_l2(embeddings).cpu().detach().numpy()
-    targets = targets.cpu().numpy()
+    distances, indices = knn(embeddings, n_neighbors, device)
 
-    # metrics
-    f1_score = compute_f1_score(dist_matrix, targets, f1_thr)
-    return f1_score
+    # compute f1 score
+    targets = targets.detach().cpu().numpy()
+    labels = [np.where(targets == label)[0] for label in targets]
+    x, y = [], []
+
+    bins = np.arange(0.05, 1.0, 0.05)
+
+    logging.info('Threshold searching...')
+    for i, thr in enumerate(bins):
+        predictions = []
+        for k in range(embeddings.shape[0]):
+            idx = np.where(distances[k,] < thr)[0]
+            ids = indices[k, idx]
+
+            predictions.append(ids)
+
+        logging.info('[{:3d}/{:3d}] {:3d}%'.format(
+            i + 1, len(bins), int(100. * (i + 1) / len(bins))
+        ))
+
+        y.append(f1_score(labels, predictions))
+        x.append(thr)
+
+    threshold = x[np.argmax(y)]
+    score = y[np.argmax(y)]
+
+    return score, threshold

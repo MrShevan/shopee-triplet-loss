@@ -4,6 +4,7 @@ import argparse
 import logging
 
 import pandas as pd
+import numpy as np
 
 from torchvision import transforms
 
@@ -14,7 +15,7 @@ from utils import get_device_name
 from lib.validate import validate_model
 
 from lib.utils import load_checkpoint
-from lib.utils import compute_phash_baseline
+from lib.utils import f1_score
 
 # TRANSFORMS
 transforms_pipeline = transforms.Compose(
@@ -37,7 +38,6 @@ def compute_phash_baseline(df: pd.DataFrame):
     labels_group = [np.where(labels == label)[0] for label in labels]
 
     return f1_score(labels_group, preds_matches)
-
 
 
 if __name__ == '__main__':
@@ -88,16 +88,14 @@ if __name__ == '__main__':
         multi_gpu
     )
 
-    logging.info(f'F1 Score Threshold: {settings["f1_thr"]}')
-
     log_interval = settings['log_interval']
-    f1_thr = settings['f1_thr']
+    n_neighbors = settings['n_neighbors']
 
     # Validate model
     validate_model(
         val_loader,
         model=model,
-        f1_thr=f1_thr,
+        n_neighbors=n_neighbors,
         device=device,
         log_interval=log_interval
     )
