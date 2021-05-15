@@ -1,5 +1,5 @@
 {
-  "config_name": "base",
+  "config_name": "base_1",
   "train_dataset": {
     "dataset_name": "shopee",
     "params": {
@@ -55,7 +55,7 @@
   "loss": {
     "loss_name" : "triplet_margin_loss",
     "params": {
-      "margin": 1.0,
+      "margin": 0.5,
       "p": 2,
       "swap": true
     }
